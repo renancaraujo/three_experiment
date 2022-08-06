@@ -11,21 +11,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Lets try some 3d stuff',
-      home: Home(),
-    );
-  }
-}
-
-class Home extends StatelessWidget {
-  const Home({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    return Scaffold(
-      body: ThreeStage(),
+      home: Builder(builder: (context) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        return const Scaffold(
+          body: ThreeStage(),
+        );
+      }),
     );
   }
 }
