@@ -117,6 +117,7 @@ class _StageState extends State<Stage> {
 
     final gl = flutterGlPlugin.gl;
     int t = DateTime.now().millisecondsSinceEpoch;
+    renderer!.clear();
     renderer!.render(scene, camera);
     int dt = DateTime.now().millisecondsSinceEpoch - t;
 
