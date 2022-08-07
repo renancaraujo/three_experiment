@@ -30,6 +30,7 @@ class _StageState extends State<Stage> {
 
   // flags
   bool initStarted = false;
+  bool initFinished = false;
   bool renderLock = false;
 
   // three stuff
@@ -52,7 +53,7 @@ class _StageState extends State<Stage> {
     super.dispose();
   }
 
-  void digestSize(Size newSize) {
+  void digestSize(Size newSize) async {
     final availableSize = this.availableSize;
     if (newSize == availableSize) {
       return;
@@ -66,6 +67,7 @@ class _StageState extends State<Stage> {
     if (initStarted) {
       return;
     }
+
     initStarted = true;
     flutterGlPlugin = FlutterGlPlugin();
     scene = three.Scene();
@@ -79,6 +81,10 @@ class _StageState extends State<Stage> {
       "dpr": pixelRatio,
     });
 
+    setState(() {});
+
+    await Future.delayed(const Duration(milliseconds: 200));
+
     await flutterGlPlugin.prepareContext();
 
     // init renderer
@@ -90,24 +96,27 @@ class _StageState extends State<Stage> {
       "canvas": flutterGlPlugin.element,
       "alpha": true,
     });
+
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(availableSize.width, availableSize.height);
     renderer.shadowMap.enabled = true;
     renderer.background.alpha = true;
 
-    setState(() {});
-
     // init props
-    final pars = three.WebGLRenderTargetOptions({"format": three.RGBAFormat});
-    final renderTarget = three.WebGLMultisampleRenderTarget(
-      (availableSize.width * pixelRatio).toInt(),
-      (availableSize.height * pixelRatio).toInt(),
-      pars,
-    );
+    if (!kIsWeb) {
+      final pars = three.WebGLRenderTargetOptions({"format": three.RGBAFormat});
+      final renderTarget = three.WebGLMultisampleRenderTarget(
+        (availableSize.width * pixelRatio).toInt(),
+        (availableSize.height * pixelRatio).toInt(),
+        pars,
+      );
 
-    renderTarget.samples = 4;
-    renderer.setRenderTarget(renderTarget);
-    sourceTexture = renderer.getRenderTargetGLTexture(renderTarget);
+      renderTarget.samples = 4;
+      renderer.setRenderTarget(renderTarget);
+      sourceTexture = renderer.getRenderTargetGLTexture(renderTarget);
+    }
+
+    initFinished = true;
   }
 
   void render() {
@@ -127,7 +136,9 @@ class _StageState extends State<Stage> {
 
     gl.finish();
 
-    flutterGlPlugin.updateTexture(sourceTexture);
+    if (!kIsWeb) {
+      flutterGlPlugin.updateTexture(sourceTexture);
+    }
 
     Future.delayed(const Duration(milliseconds: 20), () {
       renderLock = false;

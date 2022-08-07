@@ -1,4 +1,4 @@
-package com.example.three_tryout
+package com.example.three_experiment
 
 import io.flutter.embedding.android.FlutterActivity
 

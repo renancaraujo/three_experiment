@@ -1,16 +1,16 @@
-# three_tryout
+# three_experiment
 
-A new Flutter project.
 
-## Getting Started
 
-This project is a starting point for a Flutter application.
+<img src="art/screenshot.jpg" width="200" />
 
-A few resources to get you started if this is your first Flutter project:
+This is a Experiment of getting 3D elements to work on Flutter. Powered by three_dart and
+flutter_gl, this is in experimental phase.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Thanks to [wasabia](https://github.com/wasabia) for working in these pckages!
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Thanks to [Denis Sokolov](https://sketchfab.com/donnichols) for providing the NES 3d model under
+Creative Commons Attribution
+
+Tested on android (debug only) and macos.
+

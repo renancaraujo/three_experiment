@@ -1,10 +1,11 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:three_dart/three_dart.dart' as three;
 import 'package:three_dart_jsm/three_dart_jsm.dart' as three_jsm;
-import 'package:three_tryout/utils/stage.dart';
+import 'package:three_experiment/utils/stage.dart';
 
 Matrix4 _pmat(num pv) {
   return Matrix4(
@@ -38,11 +39,13 @@ class Controller3d extends StatelessWidget {
     required this.accentColor,
     required this.secondaryColor,
     required this.rotationX,
+    required this.rotationY,
   }) : super(key: key);
 
   final Color accentColor;
   final Color secondaryColor;
   final double rotationX;
+  final double rotationY;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +62,7 @@ class Controller3d extends StatelessWidget {
           accentColor: accentColor,
           secondaryColor: secondaryColor,
           rotationX: rotationX,
+          rotationY: rotationY,
         );
       },
     );
@@ -72,12 +76,14 @@ class ThreeRenderer extends StatefulWidget {
     required this.accentColor,
     required this.secondaryColor,
     required this.rotationX,
+    required this.rotationY,
   }) : super(key: key);
 
   final StageContext stageContext;
   final Color accentColor;
   final Color secondaryColor;
   final double rotationX;
+  final double rotationY;
 
   @override
   State<ThreeRenderer> createState() => _ThreeRendererState();
@@ -152,15 +158,16 @@ class _ThreeRendererState extends State<ThreeRenderer> {
     final obj =
         await loader.loadAsync('assets/nes/untitled.obj') as three.Group;
 
-    const scale = 850.0;
+    const scale = 750.0;
     obj.scale.set(scale, scale, scale);
     obj.rotation.x = pi * 0.5;
-    obj.position.z = 20;
+    obj.position.z = 5;
     obj.castShadow = true;
     obj.receiveShadow = true;
 
     controller.add(obj);
     controller.rotation.x = widget.rotationX;
+    controller.rotation.y = widget.rotationY;
 
     scene.add(controller);
 
@@ -170,11 +177,13 @@ class _ThreeRendererState extends State<ThreeRenderer> {
   }
 
   double rotationX = 0;
+  double rotationY = 0;
 
   @override
   void didUpdateWidget(ThreeRenderer oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    bool shouldRequestRender = false;
     if (oldWidget.rotationX != widget.rotationX) {
       final delta = widget.rotationX - oldWidget.rotationX;
       final newRotationX = (controller.rotation.x + delta).clamp(
@@ -184,7 +193,21 @@ class _ThreeRendererState extends State<ThreeRenderer> {
       setState(() {
         rotationX = controller.rotation.x = newRotationX;
       });
+      shouldRequestRender = true;
+    }
+    if (oldWidget.rotationY != widget.rotationY) {
+      final delta = widget.rotationY - oldWidget.rotationY;
+      final newRotationY = (controller.rotation.y + delta).clamp(
+        -pi * 0.4,
+        pi * 0.4,
+      );
+      setState(() {
+        rotationY = controller.rotation.y = newRotationY;
+      });
+      shouldRequestRender = true;
+    }
 
+    if (shouldRequestRender) {
       widget.stageContext.requestRender();
     }
   }
@@ -193,72 +216,63 @@ class _ThreeRendererState extends State<ThreeRenderer> {
   Widget build(BuildContext context) {
     Matrix4 perspective = _pmat(1.0);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final biggest =  constraints.biggest;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    widget.accentColor,
-                    widget.secondaryColor,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                widget.accentColor,
+                widget.secondaryColor,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            Positioned(
-              width: biggest.width,
-              top: (biggest.height / 2) - 100,
-              // left: (biggest.width / 2) - biggest.width *0.4,
-              child: Image.asset(
-                'assets/flutter.png',
-              ),
-            ),
-            Positioned(
-              width: biggest.width *0.9,
-              top: (biggest.height / 2) + 10,
-              left: (biggest.width / 2) - biggest.width *0.45,
-              child: Image.asset(
-                'assets/rocks.png',
-              ),
-            ),
-            Center(
-              child: Transform(
-                alignment: FractionalOffset.center,
-                transform: perspective.scaled(1.0, 1.0, 1.0)
-                  ..rotateX(rotationX)
-                  ..rotateY(0.0)
-                  ..rotateZ(0.0),
-                child: SizedBox(
-                  width: 310,
-                  height: 120,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF000000).withOpacity(0.8),
-                          spreadRadius: 5,
-                          blurRadius: 60,
-                        ),
-                      ],
+          ),
+        ),
+        Center(
+          child: Image.asset(
+            'assets/frocks.png',
+          ),
+        ),
+        Center(
+          child: Transform(
+            alignment: FractionalOffset.center,
+            transform: perspective.scaled(1.0, 1.0, 1.0)
+              ..rotateX(rotationX)
+              ..rotateY(-rotationY)
+              ..rotateZ(0.0),
+            child: SizedBox(
+              width: 310,
+              height: 120,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF000000).withOpacity(0.8),
+                      spreadRadius: 5,
+                      blurRadius: 60,
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
-            Texture(
-              textureId: widget.stageContext.textureId,
-              filterQuality: FilterQuality.medium,
-            ),
-          ],
-        );
-      }
+          ),
+        ),
+        Builder(builder: (context) {
+          if (kIsWeb) {
+            return HtmlElementView(
+              viewType: widget.stageContext.textureId.toString(),
+            );
+          }
+          return Texture(
+            textureId: widget.stageContext.textureId,
+            filterQuality: FilterQuality.medium,
+          );
+        }),
+      ],
     );
   }
 }
