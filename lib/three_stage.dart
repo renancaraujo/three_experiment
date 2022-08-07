@@ -1,188 +1,244 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gl/flutter_gl.dart';
 
 import 'package:three_dart/three_dart.dart' as three;
+import 'package:three_dart_jsm/three_dart_jsm.dart' as three_jsm;
+import 'package:three_tryout/utils/stage.dart';
 
-class ThreeStage extends StatelessWidget {
-  const ThreeStage({Key? key}) : super(key: key);
+Matrix4 _pmat(num pv) {
+  return Matrix4(
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    //
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    //
+    0.0,
+    0.0,
+    1.0,
+    pv * 0.001,
+    //
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+  );
+}
+
+final kPerspective = _pmat(1.0);
+
+class Controller3d extends StatelessWidget {
+  const Controller3d({
+    Key? key,
+    required this.accentColor,
+    required this.secondaryColor,
+    required this.rotationX,
+  }) : super(key: key);
+
+  final Color accentColor;
+  final Color secondaryColor;
+  final double rotationX;
 
   @override
   Widget build(BuildContext context) {
-    return const ThreeRenderer();
+    return Stage.builder(
+      cameraInitializer: (availableSize) => three.PerspectiveCamera(
+        45,
+        availableSize.aspectRatio,
+        1,
+        1000,
+      ),
+      stageBuilder: (context, stageContext) {
+        return ThreeRenderer(
+          stageContext: stageContext,
+          accentColor: accentColor,
+          secondaryColor: secondaryColor,
+          rotationX: rotationX,
+        );
+      },
+    );
   }
 }
 
 class ThreeRenderer extends StatefulWidget {
-  const ThreeRenderer({Key? key}) : super(key: key);
+  const ThreeRenderer({
+    Key? key,
+    required this.stageContext,
+    required this.accentColor,
+    required this.secondaryColor,
+    required this.rotationX,
+  }) : super(key: key);
+
+  final StageContext stageContext;
+  final Color accentColor;
+  final Color secondaryColor;
+  final double rotationX;
 
   @override
   State<ThreeRenderer> createState() => _ThreeRendererState();
 }
 
-const kAmount = 4;
-
 class _ThreeRendererState extends State<ThreeRenderer> {
-  late Size screenSize;
-  late double pixelRatio;
-
-  late FlutterGlPlugin flutterGlPlugin;
-  late three.Camera camera;
-  late three.Scene scene;
-  late three.WebGLRenderer renderer;
-  late three.Mesh cilinder;
-  late int sourceTexture;
-
-  bool initStarted = false;
-
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final mediaQuery = MediaQuery.of(context);
-    screenSize = Size(mediaQuery.size.width, mediaQuery.size.height);
-    pixelRatio = mediaQuery.devicePixelRatio;
-    initGl();
+  void initState() {
+    super.initState();
+    initScene();
   }
 
-  @override
-  void dispose() {
-    flutterGlPlugin.dispose();
-    super.dispose();
-  }
+  late final three.Group controller;
+  late final three.DirectionalLight accLght;
 
-  Future<void> initGl() async {
-    if (initStarted) {
-      return;
-    }
-    initStarted = true;
-    flutterGlPlugin = FlutterGlPlugin();
+  Future<void> initScene() async {
+    final stageContext = widget.stageContext;
 
-    await flutterGlPlugin.initialize(options: {
-      "antialias": true,
-      "alpha": false,
-      "width": screenSize.width.toInt(),
-      "height": screenSize.height.toInt(),
-      "dpr": pixelRatio,
-    });
+    final camera = stageContext.camera;
+    camera.position.z = 350;
 
-    setState(() {});
-
-    await flutterGlPlugin.prepareContext();
-
-    // init renderer
-
-    renderer = three.WebGLRenderer({
-      "width": screenSize.width,
-      "height": screenSize.height,
-      "gl": flutterGlPlugin.gl,
-      "antialias": true,
-      "canvas": flutterGlPlugin.element
-    });
-    renderer.setPixelRatio(pixelRatio);
-    renderer.setSize(screenSize.width, screenSize.height);
-
-    renderer.shadowMap.enabled = true;
-
-    // init props
-    final pars = three.WebGLRenderTargetOptions({"format": three.RGBAFormat});
-    final renderTarget = three.WebGLRenderTarget(
-      (screenSize.width * pixelRatio).toInt(),
-      (screenSize.height * pixelRatio).toInt(),
-      pars,
-    );
-
-    renderTarget.samples = 4;
-    renderer.setRenderTarget(renderTarget);
-    sourceTexture = renderer.getRenderTargetGLTexture(renderTarget);
-
-    // init scene
-
-    /// camera
-    camera = three.PerspectiveCamera(400, screenSize.aspectRatio, 0.1, 10);
-    camera.position.z = 1.5;
-    camera.position.multiplyScalar(2);
-    camera.lookAt(three.Vector3(0, 0, 0));
-    camera.updateMatrixWorld(false);
-    camera.position.z = 6;
-
-    scene = three.Scene();
-
-    final ambientLight = three.AmbientLight(0xcccccc, 0.4);
-    scene.add(ambientLight);
+    final scene = stageContext.scene;
     camera.lookAt(scene.position);
+    scene.add(camera);
 
-    final light = three.DirectionalLight(0xffffff, null);
-    light.position.set(0.5, 0.5, 1);
-    light.castShadow = true;
-    light.shadow?.camera?.zoom = 4; // tighter shadow map
-    scene.add(light);
+    controller = three.Group();
 
-    final background = three.Mesh(
-      three.PlaneGeometry(100, 100),
-      three.MeshPhongMaterial({"color": 0x000000}),
-    );
-    background.receiveShadow = true;
-    background.position.set(0, 0, -1);
-    scene.add(background);
+    // light
+    var pointLight = three.PointLight(0xFFFFFF, 0.1, 15, 15);
+    pointLight.position.set(-0.5, 0.5, 1000);
+    pointLight.penumbra = 1500.0;
+    pointLight.decay = 100;
+    camera.add(pointLight);
 
-    cilinder = three.Mesh(
-      three.CylinderGeometry(0.5, 0.5, 1, 90),
-      three.MeshPhongMaterial({"color": 0xF84DFF}),
-    );
+    final ambientLight = three.AmbientLight(0xffffff, 3);
+    scene.add(ambientLight);
 
-    scene.add(cilinder);
+    final l1 = three.DirectionalLight(0xffffff, 4);
+    l1.position.set(9.5, 0.5, 4);
+    l1.castShadow = true;
+    l1.shadow?.camera?.zoom = 4; // tighter shadow map
+    // scene.add(l1);
+    controller.add(l1);
 
-    render();
+    final l2 = three.DirectionalLight(0xffffff, 2);
+    l2.position.set(-0.5, 0.5, 1);
+    l2.castShadow = true;
+    l2.shadow?.camera?.zoom = 4; // tighter shadow map
+
+    // scene.add(l2);
+    controller.add(l2);
+
+    final accColor = 0x00ffffff & widget.accentColor.value;
+    final l3 = three.DirectionalLight(accColor, 0.05);
+    l3.position.set(0.0, 20, 10);
+    l3.castShadow = true;
+    l3.shadow?.camera?.zoom = 1; // tighter shadow map
+    l3.penumbra = 15.0;
+    l3.decay = 10;
+    scene.add(l3);
+
+    // texture mtl
+    var manager = three.LoadingManager();
+
+    var mtlLoader = three_jsm.MTLLoader(manager);
+    mtlLoader.setPath('assets/nes/');
+    var materials = await mtlLoader.loadAsync('untitled.mtl');
+    await materials.preload();
+
+    var loader = three_jsm.OBJLoader(null);
+    loader.setMaterials(materials);
+    final obj =
+        await loader.loadAsync('assets/nes/untitled.obj') as three.Group;
+
+    const scale = 750.0;
+    obj.scale.set(scale, scale, scale);
+    obj.rotation.x = pi * 0.5;
+    obj.position.z = 20;
+    obj.castShadow = true;
+    obj.receiveShadow = true;
+
+    controller.add(obj);
+
+    scene.add(controller);
+
+    stageContext.renderer.toneMappingExposure = 5.0;
+
+    stageContext.requestRender();
   }
 
-  bool renderLock = false;
+  double rotationX = 0;
 
-  void render() {
-    if (renderLock) return;
+  @override
+  void didUpdateWidget(ThreeRenderer oldWidget) {
+    super.didUpdateWidget(oldWidget);
 
-    renderLock = true;
+    if (oldWidget.rotationX != widget.rotationX) {
+      final delta = widget.rotationX - oldWidget.rotationX;
+      final newRotationX = (controller.rotation.x + delta).clamp(
+        -pi * 0.4,
+        pi * 0.4,
+      );
+      setState(() {
+        rotationX = controller.rotation.x = newRotationX;
+      });
 
-    final gl = flutterGlPlugin.gl;
-    int t = DateTime.now().millisecondsSinceEpoch;
-    renderer.render(scene, camera);
-    int dt = DateTime.now().millisecondsSinceEpoch - t;
-
-    if (kDebugMode) {
-      print("render cost: $dt ");
+      widget.stageContext.requestRender();
     }
-
-    gl.finish();
-
-    flutterGlPlugin.updateTexture(sourceTexture);
-
-    Future.delayed(const Duration(milliseconds: 40), () {
-      renderLock = false;
-    });
-  }
-
-  void drag(DragUpdateDetails dragUpdateDetails) {
-    final delta = dragUpdateDetails.delta / 100;
-
-    cilinder.rotation.x += delta.dy;
-
-    render();
-  }
-
-  void ontap() {
-    cilinder.rotation.x += 500;
-    render();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!flutterGlPlugin.isInitialized) {
-      return const SizedBox.shrink();
-    }
+    Matrix4 perspective = _pmat(1.0);
 
-    return GestureDetector(
-      onTap: ontap,
-      onVerticalDragUpdate: drag,
-      child: Texture(textureId: flutterGlPlugin.textureId!),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                widget.accentColor,
+                widget.secondaryColor,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        Center(
+          child: Transform(
+            alignment: FractionalOffset.center,
+            transform: perspective.scaled(1.0, 1.0, 1.0)
+              ..rotateX(rotationX)
+              ..rotateY(0.0)
+              ..rotateZ(0.0),
+            child: SizedBox(
+              width: 310,
+              height: 120,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF000000).withOpacity(0.8),
+                      spreadRadius: 5,
+                      blurRadius: 60,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Texture(
+          textureId: widget.stageContext.textureId,
+          filterQuality: FilterQuality.medium,
+        ),
+      ],
     );
   }
 }

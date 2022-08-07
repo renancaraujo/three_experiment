@@ -1,0 +1,15 @@
+# Blender 3.2.2 MTL File: 'None'
+# www.blender.org
+
+newmtl Controller
+Ns 640.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.247712 0.247712 0.247712
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd controller_BaseColor_1024.png
+map_Ns controller_Roughness_1024.png
+map_refl controller_Metallic_1024.png
