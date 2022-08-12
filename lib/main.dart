@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:three_experiment/utils/three_stage.dart';
 
 import 'controller.dart';
 
@@ -26,6 +27,26 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+class AnotherHome extends StatelessWidget {
+  const AnotherHome({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+
+
+    return const AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        body: AnotherthreeStage(),
+      ),
+    );
+  }
+}
+
 
 class Home extends StatelessWidget {
   const Home({Key? key}) : super(key: key);

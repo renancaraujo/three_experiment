@@ -58,12 +58,10 @@ class _StageState extends State<Stage> {
     if (newSize == availableSize) {
       return;
     }
-    this.availableSize = newSize;
-    tryInitGl();
+    tryInitGl(this.availableSize = newSize);
   }
 
-  Future<void> tryInitGl() async {
-    final availableSize = this.availableSize!;
+  Future<void> tryInitGl(Size availableSize) async {
     if (initStarted) {
       return;
     }
@@ -71,6 +69,7 @@ class _StageState extends State<Stage> {
     initStarted = true;
     flutterGlPlugin = FlutterGlPlugin();
     scene = three.Scene();
+
     camera = widget.cameraInitializer(availableSize);
 
     await flutterGlPlugin.initialize(options: {
@@ -81,7 +80,9 @@ class _StageState extends State<Stage> {
       "dpr": pixelRatio,
     });
 
-    setState(() {});
+    setState(() {
+      initFinished = true;
+    });
 
     await Future.delayed(const Duration(milliseconds: 200));
 
@@ -116,10 +117,11 @@ class _StageState extends State<Stage> {
       sourceTexture = renderer.getRenderTargetGLTexture(renderTarget);
     }
 
-    initFinished = true;
+    scheduledRender?.call();
   }
 
   void render() {
+    if (renderer == null) ;
     if (renderLock) return;
 
     renderLock = true;
@@ -145,26 +147,32 @@ class _StageState extends State<Stage> {
     });
   }
 
+  VoidCallback? scheduledRender;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (buildContext, constraints) {
         digestSize(constraints.biggest);
         final availableSize = this.availableSize;
-        if (!flutterGlPlugin.isInitialized ||
-            availableSize == null ||
-            renderer == null) {
+        if (!flutterGlPlugin.isInitialized || availableSize == null) {
           return const SizedBox.shrink();
         }
 
         final stageContext = StageContext(
-          requestRender: render,
+          requestRender: () {
+            if (renderer != null) {
+              render();
+            } else {
+              scheduledRender = render;
+            }
+          },
           scene: scene,
           camera: camera,
           availableSize: availableSize,
           pixelRatio: pixelRatio,
           textureId: flutterGlPlugin.textureId!,
-          renderer: renderer!,
+          renderer: renderer,
         );
         return widget.stageBuilder(buildContext, stageContext);
       },
@@ -180,7 +188,7 @@ class StageContext {
   final double pixelRatio;
   final Size availableSize;
   final int textureId;
-  final three.WebGLRenderer renderer;
+  final three.WebGLRenderer? renderer;
 
   const StageContext({
     required this.requestRender,

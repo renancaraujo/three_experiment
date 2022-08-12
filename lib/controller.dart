@@ -171,7 +171,7 @@ class _ThreeRendererState extends State<ThreeRenderer> {
 
     scene.add(controller);
 
-    stageContext.renderer.toneMappingExposure = 5.0;
+    stageContext.renderer?.toneMappingExposure = 5.0;
 
     stageContext.requestRender();
   }
